@@ -145,12 +145,12 @@ vim.opt.rtp:prepend(lazypath)
 --    :Lazy update
 --
 -- NOTE: Here is where you install your plugins.
-require('lazy').setup("plugins")
+require('lazy').setup 'plugins'
 
 ui = {
-   -- If you are using a Nerd Font: set icons to an empty table which will use the
-   -- default lazy.nvim defined Nerd Font icons, otherwise define a unicode icons table
-    icons = vim.g.have_nerd_font and {} or {
+  -- If you are using a Nerd Font: set icons to an empty table which will use the
+  -- default lazy.nvim defined Nerd Font icons, otherwise define a unicode icons table
+  icons = vim.g.have_nerd_font and {} or {
     cmd = '⌘',
     config = '🛠',
     event = '📅',
@@ -165,10 +165,7 @@ ui = {
     task = '📌',
     lazy = '💤 ',
   },
-},
+}
 
--- Load custom snippets
-require('luasnip').filetype_extend('tex', { 'latex' })
-require('luasnip.loaders.from_lua').load { paths = 'C:\\Users\\giamm\\AppData\\Local\\nvim\\lua\\snippets' }
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
