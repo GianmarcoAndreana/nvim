@@ -156,7 +156,7 @@ return {
               forwardSearchAfter = true,
             },
             forwardSearch = {
-              executable = 'zathura',
+              executable = 'sumatra',
               args = { '--synctex-forward', '%l:1:%f', '%p' },
             },
             chktex = {
