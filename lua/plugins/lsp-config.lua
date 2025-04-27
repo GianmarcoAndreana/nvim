@@ -97,9 +97,26 @@ return {
             vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
           end, '[T]oggle Inlay [H]ints')
         end
+
+        -- latex autoformat on save
+        if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_formatting, event.buf) then
+          vim.api.nvim_create_autocmd('BufWritePre', {
+            group = vim.api.nvim_create_augroup('kickstart-lsp-format', { clear = true }),
+            buffer = event.buf,
+            callback = function()
+              vim.lsp.buf.format {
+                async = false,
+                bufnr = bufnr,
+                timeout_ms = 5000, -- wait 5 seconds instead of default 1s
+                filter = function(lsp_client)
+                  return lsp_client.id == client.id
+                end,
+              }
+            end,
+          })
+        end
       end,
     })
-
     -- Diagnostic Config
     -- See :help vim.diagnostic.Opts
     vim.diagnostic.config {
