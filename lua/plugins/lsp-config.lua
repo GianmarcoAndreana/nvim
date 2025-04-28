@@ -16,42 +16,20 @@ return {
   },
   config = function()
     -- Brief aside: **What is LSP?**
-    --
-    -- LSP is an initialism you've probably heard, but might not understand what it is.
-    --
-    -- LSP stands for Language Server Protocol. It's a protocol that helps editors
-    -- and language tooling communicate in a standardized fashion.
-    --
-    -- In general, you have a "server" which is some tool built to understand a particular
-    -- language (such as `gopls`, `lua_ls`, `rust_analyzer`, etc.). These Language Servers
-    -- (sometimes called LSP servers, but that's kind of like ATM Machine) are standalone
-    -- processes that communicate with some "client" - in this case, Neovim!
-    --
-    -- LSP provides Neovim with features like:
-    --  - Go to definition
-    --  - Find references
-    --  - Autocompletion
-    --  - Symbol Search
-    --  - and more!
-    --
-    -- Thus, Language Servers are external tools that must be installed separately from
-    -- Neovim. This is where `mason` and related plugins come into play.
-    --
-    -- If you're wondering about lsp vs treesitter, you can check out the wonderfully
-    -- and elegantly composed help section, `:help lsp-vs-treesitter`
+    -- (keep your existing commentary here)
 
-    --  This function gets run when an LSP attaches to a particular buffer.
-    --    That is to say, every time a new file is opened that is associated with
-    --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
-    --    function will be executed to configure the current buffer
+    -- This function runs when an LSP attaches to a particular buffer.
     vim.api.nvim_create_autocmd('LspAttach', {
       group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
       callback = function(event)
+        local buf = event.buf
+        local client = vim.lsp.get_client_by_id(event.data.client_id)
         local map = function(keys, func, desc, mode)
           mode = mode or 'n'
-          vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
+          vim.keymap.set(mode, keys, func, { buffer = buf, desc = 'LSP: ' .. desc })
         end
 
+        -- Keymaps
         map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
         map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
         map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
@@ -70,53 +48,71 @@ return {
           end
         end
 
-        local client = vim.lsp.get_client_by_id(event.data.client_id)
-        if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf) then
+        -- Document highlight
+        if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_documentHighlight, buf) then
           local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
           vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
-            buffer = event.buf,
+            buffer = buf,
             group = highlight_augroup,
             callback = vim.lsp.buf.document_highlight,
           })
           vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
-            buffer = event.buf,
+            buffer = buf,
             group = highlight_augroup,
             callback = vim.lsp.buf.clear_references,
           })
           vim.api.nvim_create_autocmd('LspDetach', {
             group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
-            callback = function(event2)
+            callback = function(ev)
               vim.lsp.buf.clear_references()
-              vim.api.nvim_clear_autocmds { group = 'kickstart-lsp-highlight', buffer = event2.buf }
+              vim.api.nvim_clear_autocmds { group = 'kickstart-lsp-highlight', buffer = ev.buf }
             end,
           })
         end
 
-        if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf) then
+        -- Inlay hints
+        if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, buf) then
           map('<leader>th', function()
-            vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
+            vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = buf })
           end, '[T]oggle Inlay [H]ints')
         end
 
-        -- latex autoformat on save
-        if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_formatting, event.buf) then
-          vim.api.nvim_create_autocmd('BufWritePre', {
-            group = vim.api.nvim_create_augroup('kickstart-lsp-format', { clear = true }),
-            buffer = event.buf,
-            callback = function()
-              vim.lsp.buf.format {
-                async = false,
-                bufnr = bufnr,
-                timeout_ms = 5000, -- wait 5 seconds instead of default 1s
-                filter = function(lsp_client)
-                  return lsp_client.id == client.id
-                end,
-              }
-            end,
-          })
+        -- Format vs indent on save
+        if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_formatting, buf) then
+          if client.name == 'texlab' then
+            -- For TeX, only auto-indent without moving cursor or echoing messages
+            vim.api.nvim_create_autocmd('BufWritePre', {
+              group = vim.api.nvim_create_augroup('kickstart-tex-indent', { clear = false }),
+              buffer = buf,
+              callback = function()
+                local win = vim.api.nvim_get_current_win()
+                local cur = vim.api.nvim_win_get_cursor(win)
+                -- silent undojoin and indent entire buffer in one command
+                vim.cmd 'silent! undojoin | normal! gg=G'
+                vim.api.nvim_win_set_cursor(win, cur)
+              end,
+            })
+          else
+            -- For other filetypes, full LSP format on save
+            vim.api.nvim_create_autocmd('BufWritePre', {
+              group = vim.api.nvim_create_augroup('kickstart-lsp-format', { clear = true }),
+              buffer = buf,
+              callback = function()
+                vim.lsp.buf.format {
+                  async = false,
+                  bufnr = buf,
+                  timeout_ms = 5000,
+                  filter = function(c)
+                    return c.id == client.id
+                  end,
+                }
+              end,
+            })
+          end
         end
       end,
     })
+
     -- Diagnostic Config
     -- See :help vim.diagnostic.Opts
     vim.diagnostic.config {
@@ -134,8 +130,8 @@ return {
       virtual_text = {
         source = 'if_many',
         spacing = 2,
-        format = function(diagnostic)
-          return diagnostic.message
+        format = function(d)
+          return d.message
         end,
       },
     }
@@ -143,25 +139,13 @@ return {
     local capabilities = vim.lsp.protocol.make_client_capabilities()
     capabilities = vim.tbl_deep_extend('force', capabilities, require('blink.cmp').get_lsp_capabilities({}, false))
     capabilities = vim.tbl_deep_extend('force', capabilities, {
-      textDocument = {
-        foldingRange = {
-          dynamicRegistration = false,
-          lineFoldingOnly = true,
-        },
-      },
+      textDocument = { foldingRange = { dynamicRegistration = false, lineFoldingOnly = true } },
     })
 
-    -- Enable the following language servers
-    --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
+    -- Enable language servers
     local servers = {
       lua_ls = {
-        settings = {
-          Lua = {
-            completion = {
-              callSnippet = 'Replace',
-            },
-          },
-        },
+        settings = { Lua = { completion = { callSnippet = 'Replace' } } },
       },
       texlab = {
         settings = {
@@ -169,33 +153,23 @@ return {
             build = {
               executable = 'latexmk',
               args = { '-pdf', '-interaction=nonstopmode', '-synctex=1', '%f' },
-              onSave = true,
-              forwardSearchAfter = true,
+              onSave = false, -- disable build on save
             },
             forwardSearch = {
               executable = 'sumatra',
               args = { '--synctex-forward', '%l:1:%f', '%p' },
             },
-            chktex = {
-              onEdit = true,
-              onOpenAndSave = true,
-            },
+            chktex = { onEdit = true, onOpenAndSave = true },
             latexFormatter = 'latexindent',
-            latexindent = {
-              modifyLineBreaks = true,
-            },
+            latexindent = { modifyLineBreaks = true },
           },
         },
       },
     }
 
-    -- Ensure the servers and tools above are installed
-    local ensure_installed = vim.tbl_keys(servers or {})
-    vim.list_extend(ensure_installed, {
-      'stylua',
-      'ruff',
-      'pyright',
-    })
+    -- Ensure servers and tools are installed
+    local ensure_installed = vim.tbl_keys(servers)
+    vim.list_extend(ensure_installed, { 'stylua', 'ruff', 'pyright' })
     require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
     require('mason-lspconfig').setup {
@@ -203,9 +177,8 @@ return {
       automatic_installation = false,
       handlers = {
         function(server_name)
-          local server = servers[server_name] or {}
-          server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-          require('lspconfig')[server_name].setup(server)
+          local opts = vim.tbl_deep_extend('force', {}, capabilities, servers[server_name] or {})
+          require('lspconfig')[server_name].setup(opts)
         end,
       },
     }
