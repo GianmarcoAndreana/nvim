@@ -22,6 +22,11 @@ return {
           -- --full-path so the pattern can match folders, not just the filename
           command = [[fd --hidden --no-ignore --full-path Scripts\\python.exe C:/Users/giamm/my_projects]],
         },
+        mamba_venv = {
+          -- --hidden and --no-ignore  = include hidden dirs (needed for .venv)
+          -- --full-path so the pattern can match folders, not just the filename
+          command = [[fd --full-path python.exe C:/Users/giamm/miniforge3/envs]],
+        },
       },
     },
   },
