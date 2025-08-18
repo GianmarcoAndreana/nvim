@@ -22,8 +22,7 @@ return {
       'saghen/blink.cmp', -- ensure blink is available for capabilities
     },
     config = function()
-      local lspconfig = require("lspconfig")
-      local capabilities = require("blink.cmp").get_lsp_capabilities()
+      require 'config.lsp' -- your existing LSP file that calls blink.get_lsp_capabilities
     end,
   },
 }
