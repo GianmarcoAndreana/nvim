@@ -442,6 +442,7 @@ require('lazy').setup({
         clangd = {},
         -- gopls = {},
         pyright = {},
+        texlab = {},
         -- rust_analyzer = {},
         -- ts_ls = {},
 
@@ -477,6 +478,7 @@ require('lazy').setup({
         'stylua',
         'ruff',
         'pyright',
+        'texlab',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
