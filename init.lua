@@ -442,7 +442,6 @@ require('lazy').setup({
         clangd = {},
         -- gopls = {},
         pyright = {},
-        texlab = {},
         -- rust_analyzer = {},
         -- ts_ls = {},
 
@@ -457,6 +456,13 @@ require('lazy').setup({
               },
               -- You can toggle below to ignore Lua_LS's noisy `missing-fields` warnings
               -- diagnostics = { disable = { 'missing-fields' } },
+            },
+          },
+        },
+        texlab = {
+          settings = {
+            texlab = {
+              build = { onSave = true }, -- compile on save; latexmk remains default
             },
           },
         },
@@ -695,8 +701,10 @@ require('lazy').setup({
       ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python' },
       -- Autoinstall languages that are not installed
       auto_install = true,
+      ignore_install = { 'latex' },
       highlight = {
         enable = true,
+        disable = { 'latex' }, -- <— let VimTeX handle TeX highlighting
         -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
         --  If you are experiencing weird indenting issues, add the language to
         --  the list of additional_vim_regex_highlighting and disabled languages for indent.
