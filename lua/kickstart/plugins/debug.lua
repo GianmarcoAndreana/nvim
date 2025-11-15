@@ -136,19 +136,6 @@ return {
     dap.listeners.before.event_terminated['dapui_config'] = dapui.close
     dap.listeners.before.event_exited['dapui_config'] = dapui.close
 
-    -- ==== Python: choose a working interpreter ====
-    local function pick_python()
-      local exepath = vim.fn.exepath
-      if exepath 'python3' ~= '' then
-        return exepath 'python3'
-      elseif exepath 'python' ~= '' then
-        return exepath 'python'
-      else
-        return 'python3' -- last resort; may still fail if truly missing
-      end
-    end
-
-    -- Install specific config
-    require('dap-python').setup(pick_python())
+    require('dap-python').setup()
   end,
 }
