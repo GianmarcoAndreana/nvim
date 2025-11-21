@@ -127,6 +127,9 @@ end
 local rtp = vim.opt.rtp
 rtp:prepend(lazypath)
 
+-- Point to python interpreter
+vim.g.python3_host_prog = 'C:/Users/giamm/AppData/Local/Programs/Python/Python314/python.exe'
+
 -- [[ Configure and install plugins ]]
 --
 --  To check the current status of your plugins, run :Lazy
