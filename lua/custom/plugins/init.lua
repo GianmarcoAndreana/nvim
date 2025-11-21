@@ -9,6 +9,13 @@ return {
     init = function()
       -- No options set: VimTeX defaults already use latexmk and (on Windows) SumatraPDF.
       -- Kickstart already defines <localleader> = "\\", which VimTeX uses.
+      --#endregion
+      -- explicitly use latexmk as the compiler
+      vim.g.vimtex_compiler_method = 'latexmk'
+      --quickfix settings
+      vim.g.vimtex_quickfix_open_on_warning = 0 --  don't open quickfix if there are only warnings
+      vim.g.vimtex_quickfix_ignore_filters =
+        { 'Underfull', 'Overfull', 'LaTeX Warning: .\\+ float specifier changed to', 'Package hyperref Warning: Token not allowed in a PDF string' }
     end,
   },
 }
