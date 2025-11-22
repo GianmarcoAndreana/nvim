@@ -46,8 +46,14 @@ vim.o.timeoutlen = 300
 vim.o.splitright = true
 vim.o.splitbelow = true
 
--- Ensure linewrap at 80
-vim.opt_local.columns = 80
+-- Enable line wrapping
+vim.opt.wrap = true
+
+-- Recommended: Don't split words in the middle
+vim.opt.linebreak = true
+
+-- Recommended: Preserve indentation on wrapped lines
+vim.opt.breakindent = true
 
 -- Sets how neovim will display certain whitespace characters in the editor.
 --  Notice listchars is set using `vim.opt` instead of `vim.o`.
