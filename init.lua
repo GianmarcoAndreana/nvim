@@ -705,7 +705,7 @@ do
     -- But for many setups, the LSP (`rust_analyzer`) will work just fine
     -- rust_analyzer = {},
     ruff = {},
-    pyrefly = {},
+    pyright = {},
     texlab = {},
     stylua = {}, -- Used to format Lua code
 
@@ -1075,14 +1075,6 @@ do
       -- Re-apply the venv remembered for a project when you open one of its files
       enable_cached_venvs = true,
       cached_venv_automatic_activation = true,
-      -- Restart pyrefly so it picks up the new interpreter (see note below)
-      on_venv_activate_callback = function()
-        vim.lsp.enable('pyrefly', false)
-        for _, client in ipairs(vim.lsp.get_clients { name = 'pyrefly' }) do
-          client:stop()
-        end
-        vim.defer_fn(function() vim.lsp.enable 'pyrefly' end, 500)
-      end,
     },
     search = {
       my_projects_venvs = {
