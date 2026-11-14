@@ -92,6 +92,7 @@ end
 -- basic keymaps, basic autocmds
 -- ============================================================
 do
+  -- Tell WezTerm whether Neovim is running (used for Ctrl+hjkl pane navigation)
   local function set_is_nvim(value) io.stdout:write(string.format('\027]1337;SetUserVar=%s=%s\007', 'IS_NVIM', vim.base64.encode(value))) end
 
   vim.api.nvim_create_autocmd({ 'VimEnter', 'VimResume' }, {
@@ -151,7 +152,9 @@ do
 
   -- [[ Terminal ]]
   -- Use Powershell as the default terminal shell
-  vim.opt.shell = 'pwsh'
+  -- NOTE: needs the MSI install of PowerShell 7 (the Microsoft Store/MSIX version
+  -- is an app alias that Neovim cannot launch). Keep it without a full path.
+  vim.opt.shell = 'pwsh.exe'
   vim.opt.shellcmdflag = '-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command'
   vim.opt.shellquote = '"'
   vim.opt.shellxquote = ''
@@ -1064,10 +1067,45 @@ end
 
 -- ============================================================
 -- SECTION 9.7: PYTHON VENVS (uv)
--- venv-selector.nvim
+-- venv-selector.nvim + basedpyright interpreter sync
 -- ============================================================
 do
   vim.pack.add { gh 'linux-cultist/venv-selector.nvim' }
+
+  -- Path of the interpreter of the active venv
+  local function python_path()
+    local ok, vs = pcall(require, 'venv-selector')
+    local python = ok and vs.python() or nil
+    -- Fallback: venv-selector exports VIRTUAL_ENV when it activates a venv
+    if not python and vim.env.VIRTUAL_ENV then python = vim.env.VIRTUAL_ENV .. '\\Scripts\\python.exe' end
+    return python
+  end
+
+  -- Tell basedpyright which interpreter to use
+  local function apply_python(client)
+    local python = python_path()
+    if not python then return end
+    local settings = { python = { pythonPath = python } }
+    vim.lsp.config('basedpyright', { settings = settings }) -- clients started later
+    client.settings = vim.tbl_deep_extend('force', client.settings or {}, settings)
+    client:notify('workspace/didChangeConfiguration', { settings = client.settings })
+  end
+
+  -- 1. A venv was activated (picked manually or restored from the cache)
+  local function on_venv_activate()
+    for _, client in ipairs(vim.lsp.get_clients { name = 'basedpyright' }) do
+      apply_python(client)
+    end
+  end
+
+  -- 2. basedpyright attached (covers reopening files and server restarts)
+  vim.api.nvim_create_autocmd('LspAttach', {
+    group = vim.api.nvim_create_augroup('basedpyright-venv', { clear = true }),
+    callback = function(ev)
+      local client = vim.lsp.get_client_by_id(ev.data.client_id)
+      if client and client.name == 'basedpyright' then apply_python(client) end
+    end,
+  })
 
   require('venv-selector').setup {
     options = {
@@ -1075,8 +1113,10 @@ do
       -- Re-apply the venv remembered for a project when you open one of its files
       enable_cached_venvs = true,
       cached_venv_automatic_activation = true,
+      on_venv_activate_callback = on_venv_activate,
     },
     search = {
+      -- Venvs live in ~/my_projects/<project>/.venv
       my_projects_venvs = {
         command = "fd '\\.venv.Scripts.python\\.exe$' \"" .. vim.fs.normalize '~/my_projects' .. '" --full-path --max-depth 4 -a -L -H -I',
       },
